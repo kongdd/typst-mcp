@@ -19,6 +19,23 @@ with open(os.path.join(os.path.dirname(__file__), "typst-docs", "main.json"), "r
     raw_typst_docs = f.read()
 typst_docs = json.loads(raw_typst_docs)
 
+def list_child_routes(chapter: dict) -> list[dict]:
+    """
+    Lists all child routes of a chapter.
+    """
+    if "children" not in chapter:
+        return []
+    child_routes = [] # { "route": str, content_length: int }[]
+    for child in chapter["children"]:
+        if "route" in child:
+            child_routes.append({
+                "route": child["route"],
+                "content_length": len(json.dumps(child))
+            })
+        child_routes += list_child_routes(child)
+    return child_routes
+
+
 @mcp.tool()
 def list_docs_chapters() -> str:
     """
@@ -26,21 +43,6 @@ def list_docs_chapters() -> str:
     The LLM should use this in the beginning to get the list of chapters and then decide which chapter to read.
     """
     print("mcp.resource('docs://chapters') called")
-    def list_child_routes(chapter: dict) -> list[dict]:
-        """
-        Lists all child routes of a chapter.
-        """
-        if "children" not in chapter:
-            return []
-        child_routes = [] # { "route": str, content_length: int }[]
-        for child in chapter["children"]:
-            if "route" in child:
-                child_routes.append({
-                    "route": child["route"],
-                    "content_length": len(json.dumps(child))
-                })
-            child_routes += list_child_routes(child)
-        return child_routes
     chapters = []
     for chapter in typst_docs:
         chapters.append({
@@ -57,6 +59,9 @@ def get_docs_chapter(route: str) -> str:
     The route is the path to the chapter in the typst docs.
     For example, the route "____reference____layout____colbreak" corresponds to the chapter "reference/layout/colbreak".
     The route is a string with underscores ("____") instead of slashes (because MCP uses slashes to separate the input parameters).
+    
+    If a chapter has children and its content length is over 1000, this will only return the child routes
+    instead of the full content to avoid overwhelming responses.
     """
     print(f"mcp.resource('docs://chapters/{route}') called")
 
@@ -80,13 +85,44 @@ def get_docs_chapter(route: str) -> str:
             if child:
                 return child
         return {}
+    
+    # Find the requested chapter
+    found_chapter = None
     for chapter in typst_docs:
         if route_matches(chapter["route"], route):
-            return json.dumps(chapter)
+            found_chapter = chapter
+            break
         child = get_child(chapter, route)
         if child:
-            return json.dumps(child)
-    return json.dumps({})
+            found_chapter = child
+            break
+    
+    if not found_chapter:
+        return json.dumps({})
+    
+    # Check if chapter has children and is large
+    content_length = len(json.dumps(found_chapter))
+    if "children" in found_chapter and len(found_chapter["children"]) > 0 and content_length > 1000:
+        # Return just the child routes instead of full content
+        child_routes = []
+        for child in found_chapter["children"]:
+            if "route" in child:
+                child_routes.append({
+                    "route": child["route"],
+                    "content_length": len(json.dumps(child))
+                })
+        
+        # Create simplified chapter with only essential info and child routes
+        simplified_chapter = {
+            "route": found_chapter["route"],
+            "title": found_chapter.get("title", ""),
+            "content_length": content_length,
+            "note": "This chapter is large. Only child routes are shown. Request specific child routes for detailed content.",
+            "child_routes": child_routes
+        }
+        return json.dumps(simplified_chapter)
+    
+    return json.dumps(found_chapter)
 
 @mcp.tool()
 def latex_to_typst(latex_text) -> str:
@@ -325,8 +361,7 @@ def typst_to_image(typst_text) -> Image | str:
 
 
 if __name__ == "__main__":
-    # print(json.dumps(list_chapters(), indent=2))
-    # print(json.dumps(get_chapter("____reference____layout____colbreak"), indent=2))
+    print(json.dumps(get_docs_chapter("____tutorial____advanced-styling____"), indent=2))
     # print(latex_to_typst("$ f\in K ( t^ { H } , \beta ) _ { \delta } $"))
     # img : Image = typst_to_image("$f in K \( t^H \, beta \)_delta$")
     # if isinstance(img, str):
