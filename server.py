@@ -11,16 +11,16 @@ import numpy as np
 
 temp_dir = tempfile.mkdtemp()
 
-mcp = FastMCP("Demo")
+mcp = FastMCP("Typst MCP Server")
 
 # load the typst docs JSON file
 raw_typst_docs = ""
-with open("typst-docs/main.json", "r") as f:
+with open(os.path.join(os.path.dirname(__file__), "typst-docs", "main.json"), "r") as f:
     raw_typst_docs = f.read()
 typst_docs = json.loads(raw_typst_docs)
 
-@mcp.resource("docs://chapters")
-def list_chapters() -> str:
+@mcp.tool()
+def list_docs_chapters() -> str:
     """
     Lists all chapters in the typst docs.
     The LLM should use this in the beginning to get the list of chapters and then decide which chapter to read.
@@ -50,8 +50,8 @@ def list_chapters() -> str:
         chapters += list_child_routes(chapter)
     return json.dumps(chapters)
 
-@mcp.resource("docs://chapters/{route}")
-def get_chapter(route: str) -> str:
+@mcp.tool()
+def get_docs_chapter(route: str) -> str:
     """
     Gets a chapter by route.
     The route is the path to the chapter in the typst docs.
@@ -335,4 +335,4 @@ if __name__ == "__main__":
     # elif img.data is not None:
     #     with open("test.png", "wb") as f:
     #         f.write(img.data)
-    pass
+    mcp.run()
