@@ -7,6 +7,7 @@ import shutil
 import hashlib
 from PIL import Image as PILImage
 import io
+import numpy as np
 
 temp_dir = tempfile.mkdtemp()
 
@@ -198,6 +199,8 @@ def check_if_valid_typst_syntax(typst_text) -> str:
 def typst_to_image(typst_text) -> Image | str:
     """
     Converts a typst text to an image using the typst command line tool.
+    It is capable of converting multiple pages to a single png image.
+    The image gets cropped to the content and padded with 10px on each side.
 
     The LLM should use this to convert typst to an image and then evaluate if the image is what it wanted.
     If not valid, the LLM should try to fix it and check again.
@@ -249,11 +252,48 @@ def typst_to_image(typst_text) -> Image | str:
         if not page_files:
             return "ERROR: in typst_to_image. No pages were generated."
         
-        # Load all pages using PIL
-        pages = [PILImage.open(page) for page in page_files]
+        # Load all pages using PIL and crop to content
+        pages = []
+        for page_file in page_files:
+            img = PILImage.open(page_file)
+            
+            # Convert to numpy array for easier processing
+            img_array = np.array(img)
+            
+            # Check if the image is RGB
+            if len(img_array.shape) == 3 and img_array.shape[2] == 3:
+                # Find non-white pixels (R,G,B not all 255)
+                non_white = np.where(~np.all(img_array == 255, axis=2))
+            else:
+                # For grayscale images
+                non_white = np.where(img_array < 255)
+            
+            if len(non_white[0]) > 0:  # If there are non-white pixels
+                # Find bounding box
+                top = non_white[0].min()
+                bottom = non_white[0].max()
+                left = non_white[1].min()
+                right = non_white[1].max()
+                
+                # Add some padding (10px on each side)
+                padding = 10
+                top = max(0, top - padding)
+                bottom = min(img.height - 1, bottom + padding)
+                left = max(0, left - padding)
+                right = min(img.width - 1, right + padding)
+                
+                # Crop image to bounding box
+                cropped_img = img.crop((left, top, right + 1, bottom + 1))
+                pages.append(cropped_img)
+            else:
+                # If image is completely white, keep it as is
+                pages.append(img)
+        
+        if not pages:
+            return "ERROR: in typst_to_image. Failed to process page images."
         
         # Calculate total height
-        total_width = pages[0].width
+        total_width = max(page.width for page in pages)
         total_height = sum(page.height for page in pages)
         
         # Create a new image with the combined dimensions
@@ -262,7 +302,9 @@ def typst_to_image(typst_text) -> Image | str:
         # Paste all pages vertically
         y_offset = 0
         for page in pages:
-            combined_image.paste(page, (0, y_offset))
+            # Center horizontally if page is narrower than the combined image
+            x_offset = (total_width - page.width) // 2
+            combined_image.paste(page, (x_offset, y_offset))
             y_offset += page.height
             
         # Save combined image to bytes
