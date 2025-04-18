@@ -85,13 +85,15 @@ def get_chapter(route: str) -> str:
     return json.dumps({})
 
 @mcp.tool()
-def latex_to_typst(latex_text):
+def latex_to_typst(latex_text) -> str:
     """
     Converts a latex text to typst using pandoc.
 
     LLMs are way better at writing latex than typst.
     So the LLM should write the wanted output in latex and use this tool to convert it to typst.
     
+    If it was not valid latex, the tool returns "ERROR: in latex_to_typst. Failed to convert latex to typst. Error message from pandoc: {error_message}".
+
     Example 1:
     ```latex
     $ f\in K ( t^ { H } , \beta ) _ { \delta } $
@@ -124,14 +126,15 @@ def latex_to_typst(latex_text):
     with open(os.path.join(temp_dir, "main.tex"), "w") as f:
         f.write(latex_text)
 
-    # run the pandoc command line tool (suppress output and skip problematic latex_texts silently)
+    # run the pandoc command line tool and capture error output
     try:
-        subprocess.run(
+        result = subprocess.run(
             ["pandoc", os.path.join(temp_dir, "main.tex"), "--from=latex", "--to=typst", "--output", os.path.join(temp_dir, "main.typ")],
-            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
         )
-    except subprocess.CalledProcessError:
-        return None
+    except subprocess.CalledProcessError as e:
+        error_message = e.stderr.strip() if e.stderr else "Unknown error"
+        return f"ERROR: in latex_to_typst. Failed to convert latex to typst. Error message from pandoc: {error_message}"
     
     # read the typst file
     with open(os.path.join(temp_dir, "main.typ"), "r") as f:
@@ -139,6 +142,47 @@ def latex_to_typst(latex_text):
         typst = typst.strip()
 
     return typst
+
+@mcp.tool()
+def check_if_valid_typst_syntax(typst_text) -> str:
+    """
+    Checks if the given typst text is valid typst syntax.
+    Returns "VALID" if it is valid, otherwise returns "INVALID! Error message: {error_message}".
+    
+    Example 1:
+    ```typst
+    $f in K \( t^H \, beta \)_delta$
+    ```
+    returns: VALID
+
+    Example 2:
+    ```typst
+    $a = \frac{1}{2}$ // not valid typst syntax (\frac is a latex command and not a typst command)
+    ```
+    returns: INVALID! Error message: {error: unknown variable: rac
+        ┌─ temp.typ:1:7
+        │
+        1 │ $a = \frac{1}{2}$
+        │        ^^^
+        │
+        = hint: if you meant to display multiple letters as is, try adding spaces between each letter: `r a c`
+        = hint: or if you meant to display this as text, try placing it in quotes: `"rac"`}
+    
+    """
+
+    # create a main.typ file with the typst
+    with open(os.path.join(temp_dir, "main.typ"), "w") as f:
+        f.write(typst_text)
+    # run the typst command line tool and capture the result
+    try:
+        subprocess.run(
+            ["typst", "compile", os.path.join(temp_dir, "main.typ")],
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+        return "VALID"
+    except subprocess.CalledProcessError as e:
+        error_message = e.stderr.strip() if e.stderr else "Unknown error"
+        return f"INVALID! Error message: {error_message}"
 
 
 if __name__ == "__main__":
