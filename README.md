@@ -1,6 +1,6 @@
 # Typst MCP Server
 
-Typst MCP Server is an MCP (Model Context Protocol) implementation that helps AI models interact with Typst, a markup-based typesetting system. The server provides tools for converting between LaTeX and Typst, validating Typst syntax, and generating images from Typst code.
+Typst MCP Server is an [MCP (Model Context Protocol)](https://github.com/modelcontextprotocol) implementation that helps AI models interact with [Typst](https://github.com/typst/typst), a markup-based typesetting system. The server provides tools for converting between LaTeX and Typst, validating Typst syntax, and generating images from Typst code.
 
 ## Available Tools
 
@@ -38,7 +38,8 @@ The server provides the following tools:
   - `cargo run --package typst-docs -- --assets-dir ../typst-mcp/typst-docs --out-file ../typst-mcp/typst-docs/main.json`
     - Make sure to adjust the path to your local clone of the typst-mcp repository
     - This will generate the `main.json` and the assets in the `typst-docs` folder
-- Install required dependencies: `uv sync`
+- Install required dependencies: `uv sync` (install [uv](https://github.com/astral-sh/uv) if not already installed)
+  
 - Install Typst
 
 ## Running the Server
@@ -52,8 +53,12 @@ python server.py
 Or install it in Claude Desktop with MCP:
 
 ```bash
-mcp install server.py --name "Typst MCP"
+mcp install server.py
 ```
+
+Or use the new agent mode in VS Code:
+
+(Agent mode: available to all users and supports MCP)[https://code.visualstudio.com/blogs/2025/04/07/agentMode]
 
 ## JSON Schema of the Typst Documentation
 
