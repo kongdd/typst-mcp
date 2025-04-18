@@ -238,19 +238,43 @@ def typst_to_image(typst_text) -> Image | str:
             ["typst", "compile", os.path.join(temp_dir, "main.typ"), "--format", "png", "--ppi", "500", os.path.join(temp_dir, "page{0p}.png")],
             check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
         )
-        # read the image file
-        image_path = os.path.join(temp_dir, "page1.png")
-
-        # create the image object
+        
+        # Find all generated pages
+        page_files = []
+        page_num = 1
+        while os.path.exists(os.path.join(temp_dir, f"page{page_num}.png")):
+            page_files.append(os.path.join(temp_dir, f"page{page_num}.png"))
+            page_num += 1
+        
+        if not page_files:
+            return "ERROR: in typst_to_image. No pages were generated."
+        
+        # Load all pages using PIL
+        pages = [PILImage.open(page) for page in page_files]
+        
+        # Calculate total height
+        total_width = pages[0].width
+        total_height = sum(page.height for page in pages)
+        
+        # Create a new image with the combined dimensions
+        combined_image = PILImage.new('RGB', (total_width, total_height), (255, 255, 255))
+        
+        # Paste all pages vertically
+        y_offset = 0
+        for page in pages:
+            combined_image.paste(page, (0, y_offset))
+            y_offset += page.height
+            
+        # Save combined image to bytes
         img_bytes_io = io.BytesIO()
-        with PILImage.open(image_path) as img:
-            img.save(img_bytes_io, format="PNG")
+        combined_image.save(img_bytes_io, format="PNG")
         img_bytes = img_bytes_io.getvalue()
         
-        # remove the temp files
+        # Clean up temp files
         os.remove(os.path.join(temp_dir, "main.typ"))
-        os.remove(os.path.join(temp_dir, "page1.png"))
-
+        for page_file in page_files:
+            os.remove(page_file)
+            
         return Image(data=img_bytes, format="png")
     
     except subprocess.CalledProcessError as e:
