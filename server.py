@@ -1,10 +1,13 @@
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Image
 import json
 import subprocess
 import os
 import tempfile
 import shutil
 import hashlib
+from PIL import Image as PILImage
+import io
+
 temp_dir = tempfile.mkdtemp()
 
 mcp = FastMCP("Demo")
@@ -94,6 +97,8 @@ def latex_to_typst(latex_text) -> str:
     
     If it was not valid latex, the tool returns "ERROR: in latex_to_typst. Failed to convert latex to typst. Error message from pandoc: {error_message}".
 
+    This should be used primarily for converting small snippets of latex to typst but it can also be used for larger snippets.
+
     Example 1:
     ```latex
     $ f\in K ( t^ { H } , \beta ) _ { \delta } $
@@ -149,6 +154,10 @@ def check_if_valid_typst_syntax(typst_text) -> str:
     Checks if the given typst text is valid typst syntax.
     Returns "VALID" if it is valid, otherwise returns "INVALID! Error message: {error_message}".
     
+    The LLM should use this to check if the typst syntax it generated is valid.
+    If not valid, the LLM should try to fix it and check again.
+    This should be used primarily for checking small snippets of typst syntax but it can also be used for larger snippets.
+
     Example 1:
     ```typst
     $f in K \( t^H \, beta \)_delta$
@@ -184,9 +193,80 @@ def check_if_valid_typst_syntax(typst_text) -> str:
         error_message = e.stderr.strip() if e.stderr else "Unknown error"
         return f"INVALID! Error message: {error_message}"
 
+# typst compile temp.typ --format png --ppi 500 page{0p}.png -> page1.png, page2.png, etc.
+@mcp.tool()
+def typst_to_image(typst_text) -> Image | str:
+    """
+    Converts a typst text to an image using the typst command line tool.
+
+    The LLM should use this to convert typst to an image and then evaluate if the image is what it wanted.
+    If not valid, the LLM should try to fix it and check again.
+    This should be used primarily for converting small snippets of typst to images but it can also be used for larger snippets.
+
+    Example 1:
+    ```typst
+    $f in K \( t^H \, beta \)_delta$
+    ```
+    gets converted to:
+    ```image
+    <image object>
+    ```
+
+    Example 2:
+    ```typst
+    #figure(image("placeholder.png", width: 8cm),
+        caption: [
+            Placeholder image
+        ]
+    )
+    <fig:placeholder>
+    ```
+    gets converted to:
+    ```image
+    <image object>
+    ```
+
+    """
+    
+    # create a main.typ file with the typst
+    with open(os.path.join(temp_dir, "main.typ"), "w") as f:
+        f.write(typst_text)
+    
+    # run the typst command line tool and capture the result
+    try:
+        subprocess.run(
+            ["typst", "compile", os.path.join(temp_dir, "main.typ"), "--format", "png", "--ppi", "500", os.path.join(temp_dir, "page{0p}.png")],
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+        # read the image file
+        image_path = os.path.join(temp_dir, "page1.png")
+
+        # create the image object
+        img_bytes_io = io.BytesIO()
+        with PILImage.open(image_path) as img:
+            img.save(img_bytes_io, format="PNG")
+        img_bytes = img_bytes_io.getvalue()
+        
+        # remove the temp files
+        os.remove(os.path.join(temp_dir, "main.typ"))
+        os.remove(os.path.join(temp_dir, "page1.png"))
+
+        return Image(data=img_bytes, format="png")
+    
+    except subprocess.CalledProcessError as e:
+        error_message = e.stderr.strip() if e.stderr else "Unknown error"
+        return f"ERROR: in typst_to_image. Failed to convert typst to image. Error message from typst: {error_message}"
+
 
 if __name__ == "__main__":
-    pass
     # print(json.dumps(list_chapters(), indent=2))
     # print(json.dumps(get_chapter("____reference____layout____colbreak"), indent=2))
     # print(latex_to_typst("$ f\in K ( t^ { H } , \beta ) _ { \delta } $"))
+    # img : Image = typst_to_image("$f in K \( t^H \, beta \)_delta$")
+    # if isinstance(img, str):
+    #     # print(img)
+    #     print("Error: ", img)
+    # elif img.data is not None:
+    #     with open("test.png", "wb") as f:
+    #         f.write(img.data)
+    pass
