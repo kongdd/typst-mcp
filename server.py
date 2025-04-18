@@ -1,5 +1,11 @@
 from mcp.server.fastmcp import FastMCP
 import json
+import subprocess
+import os
+import tempfile
+import shutil
+import hashlib
+temp_dir = tempfile.mkdtemp()
 
 mcp = FastMCP("Demo")
 
@@ -78,6 +84,65 @@ def get_chapter(route: str) -> str:
             return json.dumps(child)
     return json.dumps({})
 
+@mcp.tool()
+def latex_to_typst(latex_text):
+    """
+    Converts a latex text to typst using pandoc.
+
+    LLMs are way better at writing latex than typst.
+    So the LLM should write the wanted output in latex and use this tool to convert it to typst.
+    
+    Example 1:
+    ```latex
+    $ f\in K ( t^ { H } , \beta ) _ { \delta } $
+    ```
+    gets converted to:
+    ```typst
+    $f in K \( t^H \, beta \)_delta$
+    ```
+
+    Example 2:
+    ```latex
+    \begin{figure}[t]
+        \includegraphics[width=8cm]{"placeholder.png"}
+        \caption{Placeholder image}
+        \label{fig:placeholder}
+        \centering
+    \end{figure}
+    ```
+    gets converted to:
+    ```typst
+    #figure(image("placeholder.png", width: 8cm),
+        caption: [
+            Placeholder image
+        ]
+    )
+    <fig:placeholder>
+    ```
+    """
+    # create a main.tex file with the latex_text
+    with open(os.path.join(temp_dir, "main.tex"), "w") as f:
+        f.write(latex_text)
+
+    # run the pandoc command line tool (suppress output and skip problematic latex_texts silently)
+    try:
+        subprocess.run(
+            ["pandoc", os.path.join(temp_dir, "main.tex"), "--from=latex", "--to=typst", "--output", os.path.join(temp_dir, "main.typ")],
+            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+    except subprocess.CalledProcessError:
+        return None
+    
+    # read the typst file
+    with open(os.path.join(temp_dir, "main.typ"), "r") as f:
+        typst = f.read()
+        typst = typst.strip()
+
+    return typst
+
+
 if __name__ == "__main__":
+    pass
     # print(json.dumps(list_chapters(), indent=2))
     # print(json.dumps(get_chapter("____reference____layout____colbreak"), indent=2))
+    # print(latex_to_typst("$ f\in K ( t^ { H } , \beta ) _ { \delta } $"))
