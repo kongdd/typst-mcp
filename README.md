@@ -58,7 +58,7 @@ mcp install server.py
 
 Or use the new agent mode in VS Code:
 
-(Agent mode: available to all users and supports MCP)[https://code.visualstudio.com/blogs/2025/04/07/agentMode]
+[Agent mode: available to all users and supports MCP](https://code.visualstudio.com/blogs/2025/04/07/agentMode)
 
 ## JSON Schema of the Typst Documentation
 
