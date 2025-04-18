@@ -361,13 +361,4 @@ def typst_to_image(typst_text) -> Image | str:
 
 
 if __name__ == "__main__":
-    print(json.dumps(get_docs_chapter("____tutorial____advanced-styling____"), indent=2))
-    # print(latex_to_typst("$ f\in K ( t^ { H } , \beta ) _ { \delta } $"))
-    # img : Image = typst_to_image("$f in K \( t^H \, beta \)_delta$")
-    # if isinstance(img, str):
-    #     # print(img)
-    #     print("Error: ", img)
-    # elif img.data is not None:
-    #     with open("test.png", "wb") as f:
-    #         f.write(img.data)
     mcp.run()
