@@ -14,14 +14,17 @@ The server provides the following tools:
 
 2. **`get_docs_chapter(route)`**: Retrieves a specific chapter from the Typst documentation.
    - Based on the chapter selected by the LLM, this tool retrieves the content of the chapter.
+   - Also available as `get_docs_chapters(routes: list)` for retrieving multiple chapters at once.
 
-3. **`latex_to_typst(latex_text)`**: Converts LaTeX code to Typst using Pandoc.
+3. **`latex_snippet_to_typst(latex_snippet)`**: Converts LaTeX code to Typst using Pandoc.
    - LLMs are better at writing LaTeX than Typst, so this tool helps convert LaTeX code to Typst.
+   - Also available as `latex_snippets_to_typst(latex_snippets: list)` for converting multiple LaTeX snippets at once.
 
-5. **`check_if_valid_typst_syntax(typst_text)`**: Validates Typst code.
+4. **`check_if_snippet_is_valid_typst_syntax(typst_snippet)`**: Validates Typst code.
    - Before sending Typst code to the user, the LLM should check if the code is valid.
+   - Also available as `check_if_snippets_are_valid_typst_syntax(typst_snippets: list)` for validating multiple Typst snippets at once.
 
-7. **`typst_to_image(typst_text)`**: Renders Typst code to a PNG image.
+5. **`typst_to_image(typst_snippet)`**: Renders Typst code to a PNG image.
    - Before sending complex Typst illustrations to the user, the LLM should render the code to an image and check if it looks correct.
    - Only relevant for multi modal models.
 
@@ -54,4 +57,4 @@ mcp install server.py --name "Typst MCP"
 
 ## JSON Schema of the Typst Documentation
 
->⚠️ The schema of the typst documentation is not stable and may change at any time. The schema is generated from the typst source code and is not guaranteed to be complete or correct. Use at your own risk.
+>⚠️ The schema of the typst documentation is not stable and may change at any time. The schema is generated from the typst source code and is not guaranteed to be complete or correct. If the schema changes, this repository will need to be updated accordingly, so that the docs functionality works again.
