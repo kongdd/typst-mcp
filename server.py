@@ -3,8 +3,6 @@ import json
 import subprocess
 import os
 import tempfile
-import shutil
-import hashlib
 from PIL import Image as PILImage
 import io
 import numpy as np
@@ -125,9 +123,31 @@ def get_docs_chapter(route: str) -> str:
     return json.dumps(found_chapter)
 
 @mcp.tool()
-def latex_to_typst(latex_text) -> str:
+def get_docs_chapters(routes: list) -> str:
     """
-    Converts a latex text to typst using pandoc.
+    Gets multiple chapters by their routes.
+    Takes a list of routes and returns a JSON stringified list of results.
+    
+    Example:
+    Input: ["____reference____layout____colbreak", "____reference____text____text"]
+    Output: JSON stringified list containing the content of both chapters
+    """
+    results = []
+    # Ensure routes is actually a list
+    if not isinstance(routes, list):
+        try:
+            routes = json.loads(routes)
+        except:
+            pass
+    
+    for route in routes:
+        results.append(json.loads(get_docs_chapter(route)))
+    return json.dumps(results)
+
+@mcp.tool()
+def latex_snippet_to_typst(latex_snippet) -> str:
+    """
+    Converts a latex to typst using pandoc.
 
     LLMs are way better at writing latex than typst.
     So the LLM should write the wanted output in latex and use this tool to convert it to typst.
@@ -164,9 +184,9 @@ def latex_to_typst(latex_text) -> str:
     <fig:placeholder>
     ```
     """
-    # create a main.tex file with the latex_text
+    # create a main.tex file with the latex_snippet
     with open(os.path.join(temp_dir, "main.tex"), "w") as f:
-        f.write(latex_text)
+        f.write(latex_snippet)
 
     # run the pandoc command line tool and capture error output
     try:
@@ -186,7 +206,29 @@ def latex_to_typst(latex_text) -> str:
     return typst
 
 @mcp.tool()
-def check_if_valid_typst_syntax(typst_text) -> str:
+def latex_snippets_to_typst(latex_snippets: list) -> str:
+    """
+    Converts multiple latex snippets to typst.
+    Takes a list of LaTeX snippets and returns a JSON stringified list of results.
+    
+    Example:
+    Input: ["$f\in K ( t^ { H } , \beta ) _ { \delta }$", "\\begin{align} a &= b \\\\ c &= d \\end{align}"]
+    Output: JSON stringified list containing the converted typst for each snippet
+    """
+    results = []
+    # Ensure latex_snippets is actually a list
+    if not isinstance(latex_snippets, list):
+        try:
+            latex_snippets = json.loads(latex_snippets)
+        except:
+            pass
+    
+    for snippet in latex_snippets:
+        results.append(latex_snippet_to_typst(snippet))
+    return json.dumps(results)
+
+@mcp.tool()
+def check_if_snippet_is_valid_typst_syntax(typst_snippet) -> str:
     """
     Checks if the given typst text is valid typst syntax.
     Returns "VALID" if it is valid, otherwise returns "INVALID! Error message: {error_message}".
@@ -218,7 +260,7 @@ def check_if_valid_typst_syntax(typst_text) -> str:
 
     # create a main.typ file with the typst
     with open(os.path.join(temp_dir, "main.typ"), "w") as f:
-        f.write(typst_text)
+        f.write(typst_snippet)
     # run the typst command line tool and capture the result
     try:
         subprocess.run(
@@ -230,9 +272,32 @@ def check_if_valid_typst_syntax(typst_text) -> str:
         error_message = e.stderr.strip() if e.stderr else "Unknown error"
         return f"INVALID! Error message: {error_message}"
 
-# typst compile temp.typ --format png --ppi 500 page{0p}.png -> page1.png, page2.png, etc.
 @mcp.tool()
-def typst_to_image(typst_text) -> Image | str:
+def check_if_snippets_are_valid_typst_syntax(typst_snippets: list) -> str:
+    """
+    Checks if multiple typst snippets have valid syntax.
+    Takes a list of typst snippets and returns a JSON stringified list of results.
+
+    The LLM should use this for example to check every single typst snippet it generated.
+    
+    Example:
+    Input: ["$f in K \\( t^H \\, beta \\)_delta$", "#let x = 1\n#x"]
+    Output: JSON stringified list containing validation results ("VALID" or error messages)
+    """
+    results = []
+    # Ensure typst_snippets is actually a list
+    if not isinstance(typst_snippets, list):
+        try:
+            typst_snippets = json.loads(typst_snippets)
+        except:
+            pass
+    
+    for snippet in typst_snippets:
+        results.append(check_if_snippet_is_valid_typst_syntax(snippet))
+    return json.dumps(results)
+
+@mcp.tool()
+def typst_snippet_to_image(typst_snippet) -> Image | str:
     """
     Converts a typst text to an image using the typst command line tool.
     It is capable of converting multiple pages to a single png image.
@@ -269,7 +334,7 @@ def typst_to_image(typst_text) -> Image | str:
     
     # create a main.typ file with the typst
     with open(os.path.join(temp_dir, "main.typ"), "w") as f:
-        f.write(typst_text)
+        f.write(typst_snippet)
     
     # run the typst command line tool and capture the result
     try:
@@ -359,6 +424,6 @@ def typst_to_image(typst_text) -> Image | str:
         error_message = e.stderr.strip() if e.stderr else "Unknown error"
         return f"ERROR: in typst_to_image. Failed to convert typst to image. Error message from typst: {error_message}"
 
-
 if __name__ == "__main__":
+
     mcp.run()
