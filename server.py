@@ -133,13 +133,6 @@ def get_docs_chapters(routes: list) -> str:
     Output: JSON stringified list containing the content of both chapters
     """
     results = []
-    # Ensure routes is actually a list
-    if not isinstance(routes, list):
-        try:
-            routes = json.loads(routes)
-        except:
-            pass
-    
     for route in routes:
         results.append(json.loads(get_docs_chapter(route)))
     return json.dumps(results)
