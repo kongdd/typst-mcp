@@ -13,7 +13,7 @@ mcp = FastMCP("Typst MCP Server")
 
 # load the typst docs JSON file
 raw_typst_docs = ""
-with open(os.path.join(os.path.dirname(__file__), "typst-docs", "main.json"), "r") as f:
+with open(os.path.join(os.path.dirname(__file__), "typst-docs", "main.json"), "r", encoding="utf-8") as f:
     raw_typst_docs = f.read()
 typst_docs = json.loads(raw_typst_docs)
 
@@ -139,7 +139,7 @@ def get_docs_chapters(routes: list) -> str:
 
 @mcp.tool()
 def latex_snippet_to_typst(latex_snippet) -> str:
-    """
+    r"""
     Converts a latex to typst using pandoc.
 
     LLMs are way better at writing latex than typst.
@@ -151,7 +151,7 @@ def latex_snippet_to_typst(latex_snippet) -> str:
 
     Example 1:
     ```latex
-    $ f\in K ( t^ { H } , \beta ) _ { \delta } $
+    "$ f\in K ( t^ { H } , \beta ) _ { \delta } $"
     ```
     gets converted to:
     ```typst
@@ -200,7 +200,7 @@ def latex_snippet_to_typst(latex_snippet) -> str:
 
 @mcp.tool()
 def latex_snippets_to_typst(latex_snippets: list) -> str:
-    """
+    r"""
     Converts multiple latex snippets to typst.
     Takes a list of LaTeX snippets and returns a JSON stringified list of results.
     
@@ -222,7 +222,7 @@ def latex_snippets_to_typst(latex_snippets: list) -> str:
 
 @mcp.tool()
 def check_if_snippet_is_valid_typst_syntax(typst_snippet) -> str:
-    """
+    r"""
     Checks if the given typst text is valid typst syntax.
     Returns "VALID" if it is valid, otherwise returns "INVALID! Error message: {error_message}".
     
@@ -232,7 +232,7 @@ def check_if_snippet_is_valid_typst_syntax(typst_snippet) -> str:
 
     Example 1:
     ```typst
-    $f in K \( t^H \, beta \)_delta$
+    "$f in K \( t^H \, beta \)_delta$"
     ```
     returns: VALID
 
@@ -267,14 +267,14 @@ def check_if_snippet_is_valid_typst_syntax(typst_snippet) -> str:
 
 @mcp.tool()
 def check_if_snippets_are_valid_typst_syntax(typst_snippets: list) -> str:
-    """
+    r"""
     Checks if multiple typst snippets have valid syntax.
     Takes a list of typst snippets and returns a JSON stringified list of results.
 
     The LLM should use this for example to check every single typst snippet it generated.
     
     Example:
-    Input: ["$f in K \\( t^H \\, beta \\)_delta$", "#let x = 1\n#x"]
+    Input: ["$f in K \( t^H \, beta \)_delta$", "#let x = 1\n#x"]
     Output: JSON stringified list containing validation results ("VALID" or error messages)
     """
     results = []
@@ -291,7 +291,7 @@ def check_if_snippets_are_valid_typst_syntax(typst_snippets: list) -> str:
 
 @mcp.tool()
 def typst_snippet_to_image(typst_snippet) -> Image | str:
-    """
+    r"""
     Converts a typst text to an image using the typst command line tool.
     It is capable of converting multiple pages to a single png image.
     The image gets cropped to the content and padded with 10px on each side.
@@ -302,7 +302,7 @@ def typst_snippet_to_image(typst_snippet) -> Image | str:
 
     Example 1:
     ```typst
-    $f in K \( t^H \, beta \)_delta$
+    "$f in K \( t^H \, beta \)_delta$"
     ```
     gets converted to:
     ```image
