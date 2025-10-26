@@ -32,28 +32,71 @@ The server provides the following tools:
 
 - Clone this repository
   - `git clone https://github.com/johannesbrandenburger/typst-mcp.git`
-- Clone the [typst repository](https://github.com/typst/typst.git)
+<!-- - Clone the [typst repository](https://github.com/typst/typst.git)
   - `git clone https://github.com/typst/typst.git`
 - Run the docs generation in the typst repository
   - `cargo run --package typst-docs -- --assets-dir ../typst-mcp/typst-docs --out-file ../typst-mcp/typst-docs/main.json`
     - Make sure to adjust the path to your local clone of the typst-mcp repository
     - This will generate the `main.json` and the assets in the `typst-docs` folder
+    > 无需再次运行 -->
 - Install required dependencies: `uv sync` (install [uv](https://github.com/astral-sh/uv) if not already installed)
-  
+
 - Install Typst
 
-## Running the Server
+  ```bash
+  scoop install typst
+  ```
 
-Execute the server script:
+## Installation
+
+<!-- Execute the server script: -->
+
+<!-- ```bash
+python server.py
+``` -->
+
+<!-- Or install it in Claude Desktop with MCP: -->
 
 ```bash
-python server.py
+uv sync
+.venv\Scripts\activate.bat
+mcp install server.py
 ```
 
-Or install it in Claude Desktop with MCP:
+```json
+// code $env:APPDATA/Claude/claude_desktop_config.json # manual edit
+{
+  "mcpServers": {
+    "Typst MCP Server": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "mcp[cli]",
+        "mcp",
+        "run",
+        "D:\\GitHub\\kongdd\\typst-mcp\\server.py"
+      ]
+    }
+  }
+}
+```
 
-```bash
-mcp install server.py
+```json
+// another format
+{
+  "mcpServers": {
+    "weather": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "D:\\GitHub\\kongdd\\typst-mcp\\",
+        "run",
+        "server.py"
+      ]
+    }
+  }
+}
 ```
 
 Or use the new agent mode in VS Code:
